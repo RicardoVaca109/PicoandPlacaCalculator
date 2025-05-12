@@ -58,7 +58,7 @@ or<br>
 cd venv/Scripts/Activate.ps1<br>
    
 **4) Install Dependencies:** <br>
-Run the following commands on the root project folder outside venv folder  
+Run the following command on the root project folder outside venv folder  
   
 *pip install -r requirements.txt  
 
