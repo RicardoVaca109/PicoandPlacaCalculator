@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request
-from services.pico_and_placa_validators import validate_weekday,validate_hour,validate_plate_by_day
+from services.pico_and_placa_logic import check_pico_placa
 
 # Register the controller as a Blueprint
 main_controller = Blueprint("main_controller", __name__)
@@ -18,24 +18,6 @@ def obtain_values():
         calculate_date = request.form['calculate_date']
         calculate_hour = request.form['calculate_hour']
         
-                
-        if validate_weekday(calculate_date):
-            if validate_hour(calculate_hour):
-                if validate_plate_by_day(vehicle_plate,calculate_date ):
-                    result = (f"Tienes Pico y Placa | Fecha: {calculate_date} |Placa {vehicle_plate} |  Hora: {calculate_hour}<br>" 
-                              f"You have Pico and Placa | Date: {calculate_date} |Plate {vehicle_plate} |  Hour: {calculate_hour}"
-                            )
-                else:
-                    result = (f"No tienes Pico y Placa (Por Placa) |Fecha: {calculate_date}| Placa {vehicle_plate} | Hora: {calculate_hour}<br>"
-                              f"You don't have Pico and Placa (Cause: Plate) |Date: {calculate_date}| Plate {vehicle_plate} | Hour: {calculate_hour}" 
-                            )
-            else:
-                result = (f"No tienes Pico y Placa (Por Hora) | Fecha: {calculate_date}|  Placa {vehicle_plate} |  Hora: {calculate_hour}<br>"
-                          f"You don't have Pico and Placa (Cause: Hour) |  Date: {calculate_date}|  Plate {vehicle_plate} |  Hour: {calculate_hour}" 
-                        )
-        else:
-            result = (f"No tienes Pico y Placa<br>"
-                      f"You don't have Pico and Placa"
-                    )
+        result = check_pico_placa (vehicle_plate, calculate_date, calculate_hour)
         
     return render_template('index.html', message = result)
