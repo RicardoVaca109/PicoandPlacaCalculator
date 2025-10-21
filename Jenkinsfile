@@ -8,20 +8,21 @@ pipeline {
         REMOTE_USER = "ricardo_vaca"
         REMOTE_HOST = "localhost"
         REMOTE_PATH = "/home/ricardo_vaca/app"
+        GIT_CREDENTIALS_ID = "github_token"  // ID del token de GitHub en Jenkins
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                echo "Clonando el repositorio..."
+                echo "📦 Clonando repositorio..."
                 checkout scm
             }
         }
 
         stage('Setup Python Environment') {
             steps {
-                echo "Configurando entorno virtual..."
+                echo "🐍 Configurando entorno virtual..."
                 sh '''
                     if [ ! -d "$VENV_DIR" ]; then
                         $PYTHON -m venv $VENV_DIR
@@ -33,66 +34,78 @@ pipeline {
             }
         }
 
-        stage('Code Linting') {
+        stage('Lint') {
             steps {
-                echo "Ejecutando análisis de estilo con flake8..."
+                echo "🔍 Ejecutando flake8..."
                 sh '''
                     . $VENV_DIR/bin/activate
-                    pip install flake8
-                    flake8 --ignore=E501 .
+                    flake8 .
                 '''
             }
         }
 
         stage('Unit Tests') {
             steps {
-                echo "Ejecutando tests con pytest..."
+                echo "🧪 Ejecutando pruebas unitarias..."
                 sh '''
                     . $VENV_DIR/bin/activate
-                    pip install pytest
-                    pytest --maxfail=1 --disable-warnings -q
-                '''
-            }
-        }
-
-        stage('Quality Scan') {
-            steps {
-                echo "Analizando calidad del código (simulado Sonar)..."
-                sh '''
-                    echo "Ejecutar sonar-scanner aquí si está configurado"
+                    pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
                 '''
             }
         }
 
         stage('Build') {
             steps {
-                echo "Simulando build de la aplicación Flask..."
-                sh '''
-                    echo "Build completado exitosamente."
-                '''
+                echo "⚙️ Compilando aplicación Flask..."
+                sh 'echo "Build completado exitosamente."'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo "Desplegando aplicación en localhost..."
+                echo "🚀 Desplegando aplicación en entorno local..."
                 sh '''
                     chmod +x scripts/deploy.sh
                     bash scripts/deploy.sh
                 '''
             }
         }
+
+        stage('Promote to Master') {
+            when {
+                branch 'dev'
+            }
+            steps {
+                echo "📤 Promoviendo cambios desde DEV hacia MASTER..."
+                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        git config user.name "Jenkins CI"
+                        git config user.email "jenkins@local"
+                        git fetch origin
+                        git checkout master
+                        git merge dev --no-edit
+                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${APP_NAME}.git master
+                    '''
+                }
+            }
+        }
     }
 
     post {
         always {
-            echo "Pipeline finalizado (estado: ${currentBuild.currentResult})"
+            echo "📋 Pipeline finalizado (estado: ${currentBuild.currentResult})"
         }
         success {
-            echo "✅ Despliegue exitoso!"
+            echo "✅ Pipeline exitoso!"
+            mail to: 'ricardo.vaca@udla.edu.ec',
+                 subject: "✅ Éxito en ${env.JOB_NAME}",
+                 body: "El pipeline ${env.JOB_NAME} se ejecutó correctamente.\nRevisa el build: ${env.BUILD_URL}"
         }
         failure {
-            echo "❌ El pipeline falló!"
+            echo "❌ Falló el pipeline!"
+            mail to: 'ricardo.vaca@udla.edu.ec',
+                 subject: "❌ Falla en ${env.JOB_NAME}",
+                 body: "El pipeline ${env.JOB_NAME} falló.\nRevisa el build: ${env.BUILD_URL}"
         }
     }
 }
