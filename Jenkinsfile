@@ -60,7 +60,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo "⚙️ Compilando / preparando la app..."
+                echo "Compilando / preparando la app..."
                 bat 'echo Build completado exitosamente.'
             }
         }
@@ -75,12 +75,43 @@ pipeline {
             }
         }
 
+        stage('Run App (Temporal)') {
+            steps {
+                echo "Iniciando app.py temporalmente (1 minuto)..."
+
+                bat """
+                    cd "%REMOTE_PATH%"
+                    call %VENV_DIR%\\Scripts\\activate
+
+                    REM Iniciar la app en background
+                    start "" cmd /c "%PYTHON% app.py"
+
+                    REM Esperar unos segundos para que levante
+                    timeout /t 5 /nobreak >nul
+
+                    REM Verificar que el puerto 5000 esté en uso
+                    echo Verificando que la app esté corriendo en el puerto 5000...
+                    netstat -ano | findstr ":5000"
+
+                    REM Mantener la app corriendo durante 60 segundos
+                    echo Esperando 60 segundos mientras la app está en ejecución...
+                    timeout /t 60 /nobreak >nul
+
+                    REM Finalizar el proceso que usa el puerto 5000
+                    echo Deteniendo la aplicación...
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000"') do taskkill /PID %%a /F
+
+                    echo app.py detenido correctamente.
+                """
+            }
+        }
+
         stage('Fetch All Branches') {
             steps {
-                echo "🔄 Descargando todas las ramas del repositorio..."
+                echo "Descargando todas las ramas del repositorio..."
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: '**']],  // Trae todas las ramas
+                    branches: [[name: '**']],
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [],
                     userRemoteConfigs: [[
@@ -93,28 +124,24 @@ pipeline {
 
         stage('Push to Master') {
             when {
-                branch 'dev'  // Solo ejecuta este stage si estás en la rama dev
+                branch 'dev'
             }
             steps {
-                echo "📤 Haciendo merge de dev a master..."
+                echo "Haciendo merge de dev a master..."
                 withCredentials([string(credentialsId: "${GIT_CREDENTIALS_ID}", variable: 'GIT_TOKEN')]) {
                     bat """
                         git config --global user.name "ricardo.vaca"
                         git config --global user.email "ricardo.vaca@udla.edu.ec"
                         git remote set-url origin https://RicardoVaca109:%GIT_TOKEN%@github.com/RicardoVaca109/PicoandPlacaCalculator.git
 
-                        REM 🔄 Traer todas las ramas remotas y sus refs
                         git fetch origin +refs/heads/*:refs/remotes/origin/*
 
-                        REM 🔧 Crear o resetear ramas locales a partir de las remotas
                         git checkout -B master origin/master
                         git checkout -B dev origin/dev
 
-                        REM 📥 Cambiar a master y hacer merge
                         git checkout master
                         git merge dev --no-edit
 
-                        REM 📤 Subir cambios a GitHub
                         git push origin master
                     """
                 }
@@ -128,8 +155,8 @@ pipeline {
 
             script {
                 def buildStatus = currentBuild.currentResult
-                def color = (buildStatus == 'SUCCESS') ? 65280 : 16711680  // Verde o rojo
-                def message = "🚀 Jenkins Pipeline Report\\n" +
+                def color = (buildStatus == 'SUCCESS') ? 65280 : 16711680
+                def message = "Jenkins Pipeline Report\\n" +
                               "**Proyecto:** ${env.JOB_NAME}\\n" +
                               "**Build:** #${env.BUILD_NUMBER}\\n" +
                               "**Estado:** ${buildStatus}\\n" +
@@ -139,7 +166,6 @@ pipeline {
 
                 echo "Enviando notificación a Discord..."
 
-                // 📢 Enviar mensaje a Discord usando credencial segura
                 withCredentials([string(credentialsId: "${DISCORD_CREDENTIALS_ID}", variable: 'DISCORD_WEBHOOK')]) {
                     bat """
                         curl -H "Content-Type: application/json" ^
