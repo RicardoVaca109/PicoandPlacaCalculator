@@ -9,7 +9,7 @@ pipeline {
         REMOTE_HOST = "localhost"
         REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"  
         GIT_CREDENTIALS_ID = "github_token"           
-        DISCORD_WEBHOOK_URL = "discord_webhook_url"
+        DISCORD_CREDENTIALS_ID = "discord_webhook_url"
     }
 
     stages {
