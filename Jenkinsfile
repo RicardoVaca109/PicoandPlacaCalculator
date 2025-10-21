@@ -15,14 +15,14 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "📦 Clonando repositorio..."
+                echo "Clonando repositorio..."
                 checkout scm
             }
         }
 
         stage('Setup Python Environment') {
             steps {
-                echo "🐍 Configurando entorno virtual..."
+                echo "Configurando entorno virtual..."
                 bat """
                     if not exist "%VENV_DIR%" (
                         %PYTHON% -m venv %VENV_DIR%
@@ -36,7 +36,7 @@ pipeline {
 
         stage('Lint') {
             steps {
-                echo "🔍 Analizando estilo de código con flake8..."
+                echo "Analizando estilo de codigo con flake8..."
                 bat """
                     call %VENV_DIR%\\Scripts\\activate
                     pip install flake8
@@ -47,7 +47,7 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                echo "🧪 Ejecutando pruebas unitarias..."
+                echo "Ejecutando pruebas unitarias..."
                 bat """
                     mkdir reports
                     set PYTHONPATH=%cd%
@@ -66,7 +66,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "🚀 Desplegando aplicación local..."
+                echo "Desplegando aplicacion local..."
                 bat """
                     REM Copiar archivos al destino (simula deploy)
                     if not exist "%REMOTE_PATH%" mkdir "%REMOTE_PATH%"
@@ -80,7 +80,7 @@ pipeline {
                 branch 'master'
             }
             steps {
-                echo "📤 Subiendo cambios a rama main..."
+                echo "Subiendo cambios a rama main..."
                 withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                     bat """
                         git config user.name "ricardo.vaca"
@@ -97,7 +97,7 @@ pipeline {
 
     post {
         always {
-            echo "📋 Pipeline finalizado (estado: ${currentBuild.currentResult})"
+            echo "Pipeline finalizado (estado: ${currentBuild.currentResult})"
             script {
                 // Enviar notificación a GitHub
                 def status = currentBuild.currentResult == 'SUCCESS' ? 'success' : 'failure'
