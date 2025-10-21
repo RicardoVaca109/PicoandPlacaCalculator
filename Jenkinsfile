@@ -74,25 +74,36 @@ pipeline {
             }
         }
 
-        stage('Push to Main') {
-            when {
-                branch 'dev'  // Solo ejecuta este stage si estás en la rama dev
-            }
-        steps {
-            echo "📤 Haciendo merge de dev a master..."
-                withCredentials([string(credentialsId: "${GIT_CREDENTIALS_ID}", variable: 'GIT_TOKEN')]) {
-                bat """
-                    git config user.name "ricardo.vaca"
-                    git config user.email "ricardo.vaca@udla.edu.ec"
-                    git remote set-url origin https://RicardoVaca109:%GIT_TOKEN%@github.com/RicardoVaca109/PicoandPlacaCalculator.git
-                    git checkout master
-                    git merge dev --no-edit
-                    git push origin master
-                """
-                }
-            }
+        stage('Push to Master') {
+    when {
+        branch 'dev'  // Solo ejecuta este stage si estás en la rama dev
+    }
+    steps {
+        echo "📤 Haciendo merge de dev a master..."
+        withCredentials([string(credentialsId: "${GIT_CREDENTIALS_ID}", variable: 'GIT_TOKEN')]) {
+            bat """
+                git config --global user.name "ricardo.vaca"
+                git config --global user.email "ricardo.vaca@udla.edu.ec"
+                git remote set-url origin https://RicardoVaca109:%GIT_TOKEN%@github.com/RicardoVaca109/PicoandPlacaCalculator.git
 
+                REM 🔄 Traer todas las ramas
+                git fetch --all
+
+                REM 🔧 Asegurar ramas locales actualizadas desde remoto
+                git branch -f master origin/master
+                git branch -f dev origin/dev
+
+                REM 📥 Cambiar a master y hacer merge
+                git checkout master
+                git merge dev --no-edit
+
+                REM 📤 Subir cambios a GitHub
+                git push origin master
+            """
+            }
         }
+    }
+
     }
     post {
         always {
