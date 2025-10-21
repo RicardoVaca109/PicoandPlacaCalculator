@@ -37,7 +37,7 @@ pipeline {
 
         stage('Lint') {
             steps {
-                echo "Analizando estilo de codigo con flake8..."
+                echo "Analizando estilo de código con flake8..."
                 bat """
                     call %VENV_DIR%\\Scripts\\activate
                     pip install flake8
@@ -52,7 +52,7 @@ pipeline {
                 bat """
                     mkdir reports
                     set PYTHONPATH=%cd%
-                    call .venv\\Scripts\\activate
+                    call %VENV_DIR%\\Scripts\\activate
                     pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
                 """
             }
@@ -67,7 +67,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Desplegando aplicacion local..."
+                echo "Desplegando aplicación local..."
                 bat """
                     if not exist "%REMOTE_PATH%" mkdir "%REMOTE_PATH%"
                     xcopy "*.*" "%REMOTE_PATH%\\" /E /I /Y /EXCLUDE:exclude.txt
@@ -87,19 +87,20 @@ pipeline {
                     start "" cmd /c "%PYTHON% app.py"
 
                     REM Esperar unos segundos para que levante
-                    timeout /t 5 /nobreak >nul
+                    echo Esperando 5 segundos para que la app inicie...
+                    ping -n 6 127.0.0.1 >nul
 
-                    REM Verificar que el puerto 5000 esté en uso
+                    REM Verificar si el puerto 5000 está en uso
                     echo Verificando que la app esté corriendo en el puerto 5000...
                     netstat -ano | findstr ":5000"
 
                     REM Mantener la app corriendo durante 60 segundos
                     echo Esperando 60 segundos mientras la app está en ejecución...
-                    timeout /t 60 /nobreak >nul
+                    ping -n 61 127.0.0.1 >nul
 
                     REM Finalizar el proceso que usa el puerto 5000
                     echo Deteniendo la aplicación...
-                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000"') do taskkill /PID %%a /F
+                    for /F "tokens=5" %%a in ('netstat -ano ^| findstr ":5000"') do taskkill /PID %%a /F
 
                     echo app.py detenido correctamente.
                 """
