@@ -80,19 +80,17 @@ pipeline {
     }
     steps {
         echo "📤 Haciendo merge de dev a master..."
-        withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+            withCredentials([string(credentialsId: "${GIT_CREDENTIALS_ID}", variable: 'GIT_TOKEN')]) {
             bat """
                 git config user.name "ricardo.vaca"
                 git config user.email "ricardo.vaca@udla.edu.ec"
-                git remote set-url origin https://%GIT_USER%:%GIT_TOKEN%@github.com/%GIT_USER%/%APP_NAME%.git
-                git fetch origin
+                git remote set-url origin https://RicardoVaca109:%GIT_TOKEN%@github.com/RicardoVaca109/PicoandPlacaCalculator.git
                 git checkout master
                 git merge dev --no-edit
                 git push origin master
             """
             }
         }
-    }
 
     }
 
