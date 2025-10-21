@@ -124,6 +124,7 @@ pipeline {
     post {
         always {
             echo "Pipeline finalizado con estado: ${currentBuild.currentResult}"
+
             script {
                 if (currentBuild.currentResult == 'SUCCESS') {
                     echo "✅ Build completado correctamente"
@@ -131,6 +132,26 @@ pipeline {
                     echo "❌ Fallo en el pipeline"
                 }
             }
+
+            // 📨 Enviar notificación por correo
+            emailext(
+                subject: "Jenkins Build: ${currentBuild.currentResult} - ${env.JOB_NAME}",
+                body: """
+                    <h2>Reporte del Pipeline</h2>
+                    <p><b>Job:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
+                    <p><b>Estado:</b> ${currentBuild.currentResult}</p>
+                    <p><b>Repositorio:</b> ${env.GIT_URL ?: 'No disponible'}</p>
+                    <p><b>Rama:</b> ${env.GIT_BRANCH ?: 'No disponible'}</p>
+                    <p><b>Log del build:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    <hr>
+                    <p>Este correo fue enviado automáticamente por Jenkins.</p>
+                """,
+                to: 'rick03093@gmail.com',     
+                from: 'rick03093@gmail.com',
+                mimeType: 'text/html'
+            )
         }
     }
+
 }
