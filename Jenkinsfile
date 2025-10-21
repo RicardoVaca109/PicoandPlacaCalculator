@@ -3,12 +3,12 @@ pipeline {
 
     environment {
         APP_NAME = "pico-placa-flask"
-        PYTHON = "python3"
+        PYTHON = "python"          // Asegúrate que Python esté en PATH
         VENV_DIR = ".venv"
         REMOTE_USER = "ricardo_vaca"
         REMOTE_HOST = "localhost"
-        REMOTE_PATH = "/home/ricardo_vaca/app"
-        GIT_CREDENTIALS_ID = "github_token"  // ID del token de GitHub en Jenkins
+        REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"  // Ajusta ruta de despliegue en Windows
+        GIT_CREDENTIALS_ID = "github_token"           // ID del token de GitHub en Jenkins
     }
 
     stages {
@@ -23,69 +23,73 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 echo "🐍 Configurando entorno virtual..."
-                sh '''
-                    if [ ! -d "$VENV_DIR" ]; then
-                        $PYTHON -m venv $VENV_DIR
-                    fi
-                    . $VENV_DIR/bin/activate
+                bat """
+                    if not exist "%VENV_DIR%" (
+                        %PYTHON% -m venv %VENV_DIR%
+                    )
+                    call %VENV_DIR%\\Scripts\\activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                '''
+                """
             }
         }
 
         stage('Lint') {
             steps {
-                echo "🔍 Ejecutando flake8..."
-                sh '''
-                    . $VENV_DIR/bin/activate
+                echo "🔍 Analizando estilo de código con flake8..."
+                bat """
+                    call %VENV_DIR%\\Scripts\\activate
+                    pip install flake8
                     flake8 .
-                '''
+                """
             }
         }
 
         stage('Unit Tests') {
             steps {
                 echo "🧪 Ejecutando pruebas unitarias..."
-                sh '''
-                    . $VENV_DIR/bin/activate
+                bat """
+                    mkdir reports
+                    call %VENV_DIR%\\Scripts\\activate
+                    pip install pytest
                     pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
-                '''
+                """
             }
         }
 
         stage('Build') {
             steps {
-                echo "⚙️ Compilando aplicación Flask..."
-                sh 'echo "Build completado exitosamente."'
+                echo "⚙️ Compilando / preparando la app..."
+                bat 'echo Build completado exitosamente.'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo "🚀 Desplegando aplicación en entorno local..."
-                sh '''
-                    chmod +x scripts/deploy.sh
-                    bash scripts/deploy.sh
-                '''
+                echo "🚀 Desplegando aplicación local..."
+                bat """
+                    REM Copiar archivos al destino (simula deploy)
+                    if not exist "%REMOTE_PATH%" mkdir "%REMOTE_PATH%"
+                    xcopy "*.*" "%REMOTE_PATH%\\" /E /I /Y /EXCLUDE:.git;.venv
+                """
             }
         }
 
-        stage('Promote to Master') {
+        stage('Push to Main') {
             when {
-                branch 'dev'
+                branch 'master'
             }
             steps {
-                echo "📤 Promoviendo cambios desde DEV hacia MASTER..."
+                echo "📤 Subiendo cambios a rama main..."
                 withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                    sh '''
-                        git config user.name "Jenkins CI"
-                        git config user.email "jenkins@local"
-                        git fetch origin
-                        git checkout master
-                        git merge dev --no-edit
-                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${APP_NAME}.git master
-                    '''
+                    bat """
+                        git config user.name "ricardo.vaca"
+                        git config user.email "ricardo.vaca@udla.edu.ec"
+                        git remote set-url origin https://%GIT_USER%:%GIT_TOKEN%@github.com/%GIT_USER%/%APP_NAME%.git
+                        git checkout main || git checkout -b main
+                        git merge master --no-edit
+                        git push origin main
+                    """
                 }
             }
         }
@@ -94,18 +98,14 @@ pipeline {
     post {
         always {
             echo "📋 Pipeline finalizado (estado: ${currentBuild.currentResult})"
-        }
-        success {
-            echo "✅ Pipeline exitoso!"
-            mail to: 'rick03093@gmail.com',
-                 subject: "✅ Éxito en ${env.JOB_NAME}",
-                 body: "El pipeline ${env.JOB_NAME} se ejecutó correctamente.\nRevisa el build: ${env.BUILD_URL}"
-        }
-        failure {
-            echo "❌ Falló el pipeline!"
-            mail to: 'rick03093@gmail.com',
-                 subject: "❌ Falla en ${env.JOB_NAME}",
-                 body: "El pipeline ${env.JOB_NAME} falló.\nRevisa el build: ${env.BUILD_URL}"
+            script {
+                // Enviar notificación a GitHub
+                def status = currentBuild.currentResult == 'SUCCESS' ? 'success' : 'failure'
+                githubNotify context: 'CI/CD Pipeline',
+                             description: "Build ${currentBuild.currentResult}",
+                             status: status,
+                             credentialsId: "${GIT_CREDENTIALS_ID}"
+            }
         }
     }
 }
