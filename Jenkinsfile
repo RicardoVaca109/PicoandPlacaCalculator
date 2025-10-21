@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "pico-placa-flask"
+        APP_NAME = "PicoandPlacaCalculator"
         PYTHON = "python"          // Asegúrate que Python esté en PATH
         VENV_DIR = ".venv"
         REMOTE_USER = "ricardo_vaca"
@@ -75,23 +75,25 @@ pipeline {
         }
 
         stage('Push to Main') {
-            when {
-                branch 'master'
-            }
-            steps {
-                echo "Subiendo cambios a rama main..."
-                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                    bat """
-                        git config user.name "ricardo.vaca"
-                        git config user.email "ricardo.vaca@udla.edu.ec"
-                        git remote set-url origin https://%GIT_USER%:%GIT_TOKEN%@github.com/%GIT_USER%/%APP_NAME%.git
-                        git checkout main || git checkout -b main
-                        git merge master --no-edit
-                        git push origin main
-                    """
-                }
+    when {
+        branch 'dev'  // Solo ejecuta este stage si estás en la rama dev
+    }
+    steps {
+        echo "📤 Haciendo merge de dev a master..."
+        withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+            bat """
+                git config user.name "ricardo.vaca"
+                git config user.email "ricardo.vaca@udla.edu.ec"
+                git remote set-url origin https://%GIT_USER%:%GIT_TOKEN%@github.com/%GIT_USER%/%APP_NAME%.git
+                git fetch origin
+                git checkout master
+                git merge dev --no-edit
+                git push origin master
+            """
             }
         }
+    }
+
     }
 
     post {
