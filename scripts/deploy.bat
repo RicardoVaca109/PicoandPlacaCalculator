@@ -16,15 +16,8 @@ echo =====================================================
 REM Crear carpeta destino
 if not exist "!REMOTE_PATH!" mkdir "!REMOTE_PATH!"
 
-REM Crear archivo de exclusiones
-echo .git> exclude.txt
-echo .venv>> exclude.txt
-
-REM Copiar archivos (simula deploy)
-xcopy "!LOCAL_BUILD_PATH!\*" "!REMOTE_PATH!" /E /I /Y /EXCLUDE:exclude.txt
+REM Copiar archivos (simula deploy) usando exclude.txt
+xcopy "!LOCAL_BUILD_PATH!\*" "!REMOTE_PATH!\" /E /I /Y /EXCLUDE:exclude.txt
 
 echo Despliegue completado con éxito 🚀
 echo La aplicación está lista en !REMOTE_PATH!
-
-REM Limpiar archivo de exclusiones
-del exclude.txt
