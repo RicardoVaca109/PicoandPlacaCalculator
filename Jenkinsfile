@@ -3,12 +3,13 @@ pipeline {
 
     environment {
         APP_NAME = "PicoandPlacaCalculator"
-        PYTHON = "python"          // Asegúrate que Python esté en PATH
+        PYTHON = "python"          
         VENV_DIR = ".venv"
         REMOTE_USER = "ricardo_vaca"
         REMOTE_HOST = "localhost"
-        REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"  // Ajusta ruta de despliegue en Windows
-        GIT_CREDENTIALS_ID = "github_token"           // ID del token de GitHub en Jenkins
+        REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"  
+        GIT_CREDENTIALS_ID = "github_token"           
+        DISCORD_WEBHOOK_URL = "discord_webhook_url"
     }
 
     stages {
@@ -126,32 +127,28 @@ pipeline {
             echo "Pipeline finalizado con estado: ${currentBuild.currentResult}"
 
             script {
-                if (currentBuild.currentResult == 'SUCCESS') {
-                    echo "✅ Build completado correctamente"
-                } else {
-                    echo "❌ Fallo en el pipeline"
+                def buildStatus = currentBuild.currentResult
+                def color = (buildStatus == 'SUCCESS') ? 65280 : 16711680  // Verde o rojo
+                def message = "🚀 Jenkins Pipeline Report\\n" +
+                              "**Proyecto:** ${env.JOB_NAME}\\n" +
+                              "**Build:** #${env.BUILD_NUMBER}\\n" +
+                              "**Estado:** ${buildStatus}\\n" +
+                              "**Repositorio:** ${env.GIT_URL ?: 'No disponible'}\\n" +
+                              "**Rama:** ${env.GIT_BRANCH ?: 'No disponible'}\\n" +
+                              "**Log:** ${env.BUILD_URL}"
+
+                echo "Enviando notificación a Discord..."
+
+                // 📢 Enviar mensaje a Discord usando credencial segura
+                withCredentials([string(credentialsId: "${DISCORD_CREDENTIALS_ID}", variable: 'DISCORD_WEBHOOK')]) {
+                    bat """
+                        curl -H "Content-Type: application/json" ^
+                             -X POST ^
+                             -d "{\\"embeds\\":[{\\"title\\":\\"${env.JOB_NAME}\\",\\"description\\":\\"${message}\\",\\"color\\":${color}}]}" ^
+                             %DISCORD_WEBHOOK%
+                    """
                 }
             }
-
-            // 📨 Enviar notificación por correo
-            emailext(
-                subject: "Jenkins Build: ${currentBuild.currentResult} - ${env.JOB_NAME}",
-                body: """
-                    <h2>Reporte del Pipeline</h2>
-                    <p><b>Job:</b> ${env.JOB_NAME}</p>
-                    <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
-                    <p><b>Estado:</b> ${currentBuild.currentResult}</p>
-                    <p><b>Repositorio:</b> ${env.GIT_URL ?: 'No disponible'}</p>
-                    <p><b>Rama:</b> ${env.GIT_BRANCH ?: 'No disponible'}</p>
-                    <p><b>Log del build:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                    <hr>
-                    <p>Este correo fue enviado automáticamente por Jenkins.</p>
-                """,
-                to: 'rick03093@gmail.com',     
-                from: 'rick03093@gmail.com',
-                mimeType: 'text/html'
-            )
         }
     }
-
 }
