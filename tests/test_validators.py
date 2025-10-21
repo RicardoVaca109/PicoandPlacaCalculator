@@ -37,10 +37,5 @@ def test_validate_plate_by_day_matches_rules():
 
 
 def test_validate_plate_by_day_non_restricted():
-    # Sunday should not be in restrictions (weekend)
-    with pytest.raises(ValueError):
-        # If plate date conversion fails or
-        # logic differs, ensure behavior
-        # But our implementation expects a valid date —
-        # we test a weekday not in restrictions
-        validate_plate_by_day("ABC-1233", "2025-10-19")
+    # Sunday should not be restricted
+    assert validate_plate_by_day("ABC-1233", "2025-10-19") is False
