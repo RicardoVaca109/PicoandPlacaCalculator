@@ -17,7 +17,7 @@ REM Crear carpeta destino
 if not exist "!REMOTE_PATH!" mkdir "!REMOTE_PATH!"
 
 REM Copiar archivos (simula deploy) usando exclude.txt
-xcopy "!LOCAL_BUILD_PATH!\*" "!REMOTE_PATH!\" /E /I /Y /EXCLUDE:exclude.txt
+xcopy "!LOCAL_BUILD_PATH!\*" "!REMOTE_PATH!\" /E /I /Y /EXCLUDE:"!LOCAL_BUILD_PATH!\exclude.txt"
 
 echo Despliegue completado con éxito 🚀
 echo La aplicación está lista en !REMOTE_PATH!
