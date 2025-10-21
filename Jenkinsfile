@@ -3,12 +3,12 @@ pipeline {
 
     environment {
         APP_NAME = "PicoandPlacaCalculator"
-        PYTHON = "python"          
+        PYTHON = "python"
         VENV_DIR = ".venv"
         REMOTE_USER = "ricardo_vaca"
         REMOTE_HOST = "localhost"
-        REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"  
-        GIT_CREDENTIALS_ID = "github_token"           
+        REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"
+        GIT_CREDENTIALS_ID = "github_token"
         DISCORD_CREDENTIALS_ID = "discord_webhook_url"
     }
 
@@ -75,37 +75,41 @@ pipeline {
             }
         }
 
-        stage('Ejecutar aplicación temporalmente') {
+        stage('Run App (Temporal)') {
             steps {
-                echo 'Ejecutando app.py por 1 minuto...'
+                echo "Ejecutando app.py por 1 minuto..."
                 bat '''
-                echo Activando entorno virtual y ejecutando app...
-                call venv\\Scripts\\activate
+                cd "%REMOTE_PATH%"
 
-                echo Iniciando app.py en segundo plano...
-                start /B python app.py
-
-                echo Esperando 5 segundos para que la app inicie...
-                timeout /t 5
-
-                echo Verificando que la app esté corriendo en el puerto 5000...
-                netstat -ano | findstr :5000
-
-                echo Esperando 60 segundos mientras la app está en ejecución...
-                timeout /t 60
-
-                echo Deteniendo la aplicación...
-                for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000') do (
-                    echo Terminando proceso con PID %%a
-                    taskkill /PID %%a /F
+                REM Crear virtualenv si no existe
+                if not exist ".venv" (
+                    python -m venv .venv
                 )
 
-                echo app.py detenido correctamente.
+                REM Activar entorno virtual
+                call .venv\\Scripts\\activate
+
+                REM Instalar dependencias
+                pip install --upgrade pip
+                pip install -r requirements.txt
+
+                REM Iniciar app en background
+                start /B python app.py
+
+                REM Esperar 5 segundos para que inicie
+                ping -n 6 127.0.0.1
+
+                REM Verificar puerto
+                netstat -ano | findstr ":5000"
+
+                REM Mantener la app corriendo 60 segundos
+                ping -n 61 127.0.0.1
+
+                REM Detener la app
+                for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000"') do taskkill /PID %%a /F
                 '''
             }
-    }
-
-
+        }
 
         stage('Fetch All Branches') {
             steps {
