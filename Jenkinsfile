@@ -77,7 +77,7 @@ pipeline {
 
         stage('Run App (Temporal)') {
             steps {
-                echo "Iniciando app.py temporalmente (1 minuto)..."
+                echo "Iniciando app.py temporalmente (1 minuto).."
 
                 bat """
                     cd "%WORKSPACE%"
