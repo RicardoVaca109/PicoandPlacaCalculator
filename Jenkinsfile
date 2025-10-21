@@ -76,33 +76,33 @@ pipeline {
         }
 
         stage('Ejecutar aplicación temporalmente') {
-        steps {
-            echo 'Ejecutando app.py por 1 minuto...'
-            bat '''
-            echo Activando entorno virtual y ejecutando app...
-            call venv\\Scripts\\activate
+            steps {
+                echo 'Ejecutando app.py por 1 minuto...'
+                bat '''
+                echo Activando entorno virtual y ejecutando app...
+                call venv\\Scripts\\activate
 
-            echo Iniciando app.py en segundo plano...
-            start /B python app.py
+                echo Iniciando app.py en segundo plano...
+                start /B python app.py
 
-            echo Esperando 5 segundos para que la app inicie...
-            timeout /t 5
+                echo Esperando 5 segundos para que la app inicie...
+                timeout /t 5
 
-            echo Verificando que la app esté corriendo en el puerto 5000...
-            netstat -ano | findstr :5000
+                echo Verificando que la app esté corriendo en el puerto 5000...
+                netstat -ano | findstr :5000
 
-            echo Esperando 60 segundos mientras la app está en ejecución...
-            timeout /t 60
+                echo Esperando 60 segundos mientras la app está en ejecución...
+                timeout /t 60
 
-            echo Deteniendo la aplicación...
-            for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000') do (
-                echo Terminando proceso con PID %%a
-                taskkill /PID %%a /F
-            )
+                echo Deteniendo la aplicación...
+                for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000') do (
+                    echo Terminando proceso con PID %%a
+                    taskkill /PID %%a /F
+                )
 
-            echo app.py detenido correctamente.
-            '''
-        }
+                echo app.py detenido correctamente.
+                '''
+            }
     }
 
 
