@@ -50,8 +50,8 @@ pipeline {
                 echo "🧪 Ejecutando pruebas unitarias..."
                 bat """
                     mkdir reports
-                    call %VENV_DIR%\\Scripts\\activate
-                    pip install pytest
+                    set PYTHONPATH=%cd%
+                    call .venv\\Scripts\\activate
                     pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
                 """
             }
