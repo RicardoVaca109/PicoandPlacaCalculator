@@ -93,8 +93,8 @@ pipeline {
             }
 
         }
-
-        post {
+    }
+    post {
         always {
             echo "Pipeline finalizado con estado: ${currentBuild.currentResult}"
             script {
@@ -102,7 +102,6 @@ pipeline {
                     echo "✅ Build completado correctamente"
                 } else {
                     echo "❌ Fallo en el pipeline"
-                }
                 }
             }
         }
