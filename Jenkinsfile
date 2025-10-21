@@ -68,9 +68,8 @@ pipeline {
             steps {
                 echo "Desplegando aplicacion local..."
                 bat """
-                    REM Copiar archivos al destino (simula deploy)
                     if not exist "%REMOTE_PATH%" mkdir "%REMOTE_PATH%"
-                    xcopy "*.*" "%REMOTE_PATH%\\" /E /I /Y /EXCLUDE:.git;.venv
+                    xcopy "*.*" "%REMOTE_PATH%\\" /E /I /Y /EXCLUDE:exclude.txt
                 """
             }
         }
@@ -96,15 +95,14 @@ pipeline {
     }
 
     post {
-        always {
-            echo "Pipeline finalizado (estado: ${currentBuild.currentResult})"
-            script {
-                // Enviar notificación a GitHub
-                def status = currentBuild.currentResult == 'SUCCESS' ? 'success' : 'failure'
-                githubNotify context: 'CI/CD Pipeline',
-                             description: "Build ${currentBuild.currentResult}",
-                             status: status,
-                             credentialsId: "${GIT_CREDENTIALS_ID}"
+    always {
+        echo "Pipeline finalizado con estado: ${currentBuild.currentResult}"
+        script {
+            if (currentBuild.currentResult == 'SUCCESS') {
+                echo "✅ Build completado correctamente"
+            } else {
+                echo "❌ Fallo en el pipeline"
+            }
             }
         }
     }
