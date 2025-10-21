@@ -97,13 +97,13 @@ pipeline {
         }
         success {
             echo "✅ Pipeline exitoso!"
-            mail to: 'ricardo.vaca@udla.edu.ec',
+            mail to: 'rick03093@gmail.com',
                  subject: "✅ Éxito en ${env.JOB_NAME}",
                  body: "El pipeline ${env.JOB_NAME} se ejecutó correctamente.\nRevisa el build: ${env.BUILD_URL}"
         }
         failure {
             echo "❌ Falló el pipeline!"
-            mail to: 'ricardo.vaca@udla.edu.ec',
+            mail to: 'rick03093@gmail.com',
                  subject: "❌ Falla en ${env.JOB_NAME}",
                  body: "El pipeline ${env.JOB_NAME} falló.\nRevisa el build: ${env.BUILD_URL}"
         }
