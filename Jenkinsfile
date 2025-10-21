@@ -80,7 +80,7 @@ pipeline {
                 echo "Iniciando app.py temporalmente (1 minuto)..."
 
                 bat """
-                    cd "%REMOTE_PATH%"
+                    cd "%WORKSPACE%"
                     call %VENV_DIR%\\Scripts\\activate
 
                     REM Iniciar la app en background
@@ -106,6 +106,7 @@ pipeline {
                 """
             }
         }
+
 
         stage('Fetch All Branches') {
             steps {
