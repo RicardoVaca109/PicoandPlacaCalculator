@@ -62,8 +62,9 @@ jobs:
       - run:
           name: Build project
           command: |
-            echo "Build completado exitosamente."
+            echo "Compilando y preparando app..."
             echo "SUCCESSFUL" > result.txt
+            exit 0
       - persist_to_workspace:
           root: .
           paths:
@@ -78,7 +79,7 @@ jobs:
       - run:
           name: Determine final status
           command: |
-            # Si algún resultado previo falló, se marca como ABORTED
+            # Si hay algún 'FAILED' en los resultados, marcamos ABORTED
             if grep -q "FAILED" result.txt 2>/dev/null; then
               echo "ABORTED" > final_status.txt
             else
@@ -106,7 +107,6 @@ jobs:
 workflows:
   version: 2
 
-  # Primer workflow: build y pruebas
   build_and_test:
     jobs:
       - lint
@@ -116,15 +116,6 @@ workflows:
       - build:
           requires:
             - unit-tests
-
-  # Segundo workflow: notificación
-  notify:
-    triggers:
-      - schedule:
-          cron: "0 * * * *"  # Se ejecuta automáticamente cada hora (puedes cambiarlo)
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - notify-discord
+      - notify-discord:
+          requires:
+            - build
