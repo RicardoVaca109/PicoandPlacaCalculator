@@ -4,26 +4,27 @@ orbs:
   python: circleci/python@2.1.1
 
 jobs:
-  # 1️⃣ Lint del código
   lint:
     docker:
       - image: cimg/python:3.12
     steps:
       - checkout
       - run:
-          name: Setup Python Environment
+          name: Lint code with flake8
           command: |
             python -m venv .venv
             . .venv/bin/activate
             pip install --upgrade pip
-            pip install flake8 -r requirements.txt
-      - run:
-          name: Run flake8
-          command: |
-            . .venv/bin/activate
+            pip install flake8
             flake8 .
+      - run:
+          name: Save lint result
+          command: echo "SUCCESSFUL" > result.txt
+      - persist_to_workspace:
+          root: .
+          paths:
+            - result.txt
 
-  # 2️⃣ Tests unitarios (con paralelismo)
   unit-tests:
     docker:
       - image: cimg/python:3.12
@@ -31,53 +32,70 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setup Python Environment
+          name: Run unit tests
           command: |
             python -m venv .venv
             . .venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
+            pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml || echo "FAILED" > result.txt
       - run:
-          name: Run Unit Tests
+          name: Save unit test result
           command: |
-            mkdir -p reports
-            . .venv/bin/activate
-            export PYTHONPATH=$(pwd)
-            pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
+            if [ ! -f result.txt ]; then echo "SUCCESSFUL" > result.txt; fi
+      - persist_to_workspace:
+          root: .
+          paths:
+            - result.txt
+            - reports
       - store_artifacts:
           path: reports
           destination: test-results
 
-  # 3️⃣ Build
   build:
     docker:
       - image: cimg/python:3.12
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - run:
-          name: Build App
+          name: Build project
           command: |
             echo "Build completado exitosamente."
+            echo "SUCCESSFUL" > result.txt
+      - persist_to_workspace:
+          root: .
+          paths:
+            - result.txt
 
-  # 4️⃣ Notificación a Discord
   notify-discord:
     docker:
-      - image: cimg/base:stable
+      - image: cimg/python:3.12
     steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Determine final status
+          command: |
+            # Si algún resultado previo falló, se marca como ABORTED
+            if grep -q "FAILED" result.txt 2>/dev/null; then
+              echo "ABORTED" > final_status.txt
+            else
+              echo "SUCCESSFUL" > final_status.txt
+            fi
       - run:
           name: Send Discord Notification
           when: always
           command: |
-            echo "Determinando estado del workflow..."
-            if [ "$CIRCLE_WORKFLOW_STATUS" = "success" ]; then
-              STATUS="SUCCESSFUL"
-              COLOR=65280  # Verde
+            STATUS=$(cat final_status.txt || echo "ABORTED")
+            if [ "$STATUS" = "SUCCESSFUL" ]; then
+              COLOR=65280
             else
-              STATUS="ABORTED"
-              COLOR=16711680  # Rojo
+              COLOR=16711680
             fi
 
-            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Workflow:** ${CIRCLE_WORKFLOW_ID}\n**Estado:** ${STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
+            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
 
             echo "Enviando notificación a Discord..."
             curl -H "Content-Type: application/json" \
@@ -85,11 +103,10 @@ jobs:
                  -d "{\"embeds\":[{\"title\":\"${CIRCLE_PROJECT_REPONAME}\",\"description\":\"${MESSAGE}\",\"color\":${COLOR}}]}" \
                  $DISCORD_WEBHOOK_URL
 
-# 🧩 Workflows: uno para la ejecución principal, otro para la notificación
 workflows:
   version: 2
 
-  # Primer workflow → Build principal
+  # Primer workflow: build y pruebas
   build_and_test:
     jobs:
       - lint
@@ -100,8 +117,14 @@ workflows:
           requires:
             - unit-tests
 
-  # Segundo workflow → Notificación (se ejecuta siempre, independiente)
+  # Segundo workflow: notificación
   notify:
+    triggers:
+      - schedule:
+          cron: "0 * * * *"  # Se ejecuta automáticamente cada hora (puedes cambiarlo)
+          filters:
+            branches:
+              only:
+                - main
     jobs:
-      - notify-discord:
-          context: discord-webhook
+      - notify-discord
