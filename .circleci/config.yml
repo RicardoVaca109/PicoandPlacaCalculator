@@ -58,13 +58,22 @@ jobs:
           name: Send Discord Notification
           when: always
           command: |
-            if [ "${CIRCLE_JOB_STATUS}" = "success" ]; then
-              COLOR=65280
+            echo "Determinando estado del build..."
+            # CircleCI expone el estado del job como exit code. Si no hay error, es 0.
+            if [ "$CIRCLE_JOB" = "build-and-test" ]; then
+              if [ "$CIRCLECI_EXIT_CODE" = "0" ] || [ -z "$CIRCLECI_EXIT_CODE" ]; then
+                STATUS="SUCCESSFUL"
+                COLOR=65280   # Verde
+              else
+                STATUS="ABORTED"
+                COLOR=16711680  # Rojo
+              fi
             else
-              COLOR=16711680
+              STATUS="UNKNOWN"
+              COLOR=16776960  # Amarillo
             fi
 
-            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${CIRCLE_JOB_STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
+            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
 
             echo "Enviando notificación a Discord..."
             curl -H "Content-Type: application/json" \
