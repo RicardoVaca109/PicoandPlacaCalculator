@@ -1,51 +1,83 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/reference/configuration-reference
-
-# For a detailed guide to building and testing with Python, read the docs:
-# https://circleci.com/docs/language-python/ for more details
 version: 2.1
 
-# Orbs are reusable packages of CircleCI configuration that you may share across projects, enabling you to create encapsulated, parameterized commands, jobs, and executors that can be used across multiple projects.
-# See: https://circleci.com/docs/orbs/use/orb-intro/
 orbs:
-  # See the Python orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@2.1.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
 jobs:
   build-and-test:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
     docker:
-      # Specify the version you desire here
-      # See:https://circleci.com/developer/images/image/cimg/python
       - image: cimg/python:3.12
+    environment:
+      APP_NAME: "PicoandPlacaCalculator"
+      REMOTE_USER: "ricardo_vaca"
+      REMOTE_HOST: "localhost"
+      REMOTE_PATH: "C:\\Users\\ricardo_vaca\\app"
+      GIT_URL: "https://github.com/RicardoVaca109/PicoandPlacaCalculator.git"
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
     steps:
-      # Checkout the code as the first step.
       - checkout
-      # Instalar paquetes
-      - python/install-packages:
-          pkg-manager: pip
-      # Echo: directorio actual
-      - run:
-          name: Show current directory
-          command: pwd
-      - run:
-          name: List files in root
-          command: ls -la
-      - run:
-          name: Run tests
-          # This assumes pytest is installed via the install-package step above
-          command: python -m pytest tests/
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
+      - run:
+          name: Setup Python Environment
+          command: |
+            python -m venv .venv
+            . .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+      - run:
+          name: Lint with flake8
+          command: |
+            . .venv/bin/activate
+            pip install flake8
+            flake8 .
+
+      - run:
+          name: Run Unit Tests
+          command: |
+            mkdir -p reports
+            . .venv/bin/activate
+            pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
+
+      - run:
+          name: Build
+          command: |
+            echo "Build completado exitosamente."
+
+      - run:
+          name: Fetch All Branches
+          command: |
+            git fetch --all
+
+      - store_artifacts:
+          path: reports
+          destination: test-results
+
+      # Notificación a Discord
+      - run:
+          name: Send Discord Notification
+          when: always
+          command: |
+            STATUS="${CIRCLE_JOB} - ${CIRCLE_BUILD_NUM}"
+            if [ "${CIRCLE_JOB}" = "build-and-test" ]; then
+              if [ "${CIRCLE_JOB_STATUS}" = "success" ]; then
+                COLOR=65280
+              else
+                COLOR=16711680
+              fi
+            fi
+
+            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${CIRCLE_JOB_STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
+
+            echo "Enviando notificación a Discord..."
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{\"embeds\":[{\"title\":\"${CIRCLE_PROJECT_REPONAME}\",\"description\":\"${MESSAGE}\",\"color\":${COLOR}}]}" \
+                 $DISCORD_WEBHOOK_URL
+
 workflows:
-  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  version: 2
+  build_and_test:
     jobs:
-      - build-and-test
+      - build-and-test:
+          context: discord-webhook
