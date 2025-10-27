@@ -37,6 +37,7 @@ jobs:
           command: |
             mkdir -p reports
             . .venv/bin/activate
+            export PYTHONPATH=$(pwd)
             pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
 
       - run:
@@ -53,18 +54,14 @@ jobs:
           path: reports
           destination: test-results
 
-      # Notificación a Discord
       - run:
           name: Send Discord Notification
           when: always
           command: |
-            STATUS="${CIRCLE_JOB} - ${CIRCLE_BUILD_NUM}"
-            if [ "${CIRCLE_JOB}" = "build-and-test" ]; then
-              if [ "${CIRCLE_JOB_STATUS}" = "success" ]; then
-                COLOR=65280
-              else
-                COLOR=16711680
-              fi
+            if [ "${CIRCLE_JOB_STATUS}" = "success" ]; then
+              COLOR=65280
+            else
+              COLOR=16711680
             fi
 
             MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${CIRCLE_JOB_STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
