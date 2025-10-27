@@ -4,19 +4,32 @@ orbs:
   python: circleci/python@2.1.1
 
 jobs:
-  build-and-test:
+  # 1️⃣ Lint del código
+  lint:
     docker:
       - image: cimg/python:3.12
-    environment:
-      APP_NAME: "PicoandPlacaCalculator"
-      REMOTE_USER: "ricardo_vaca"
-      REMOTE_HOST: "localhost"
-      REMOTE_PATH: "C:\\Users\\ricardo_vaca\\app"
-      GIT_URL: "https://github.com/RicardoVaca109/PicoandPlacaCalculator.git"
-
     steps:
       - checkout
+      - run:
+          name: Setup Python Environment
+          command: |
+            python -m venv .venv
+            . .venv/bin/activate
+            pip install --upgrade pip
+            pip install flake8 -r requirements.txt
+      - run:
+          name: Run flake8
+          command: |
+            . .venv/bin/activate
+            flake8 .
 
+  # 2️⃣ Tests unitarios (con paralelismo)
+  unit-tests:
+    docker:
+      - image: cimg/python:3.12
+    parallelism: 2
+    steps:
+      - checkout
       - run:
           name: Setup Python Environment
           command: |
@@ -24,14 +37,6 @@ jobs:
             . .venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
-
-      - run:
-          name: Lint with flake8
-          command: |
-            . .venv/bin/activate
-            pip install flake8
-            flake8 .
-
       - run:
           name: Run Unit Tests
           command: |
@@ -39,41 +44,40 @@ jobs:
             . .venv/bin/activate
             export PYTHONPATH=$(pwd)
             pytest --maxfail=1 --disable-warnings --junitxml=reports/junit.xml
-
-      - run:
-          name: Build
-          command: |
-            echo "Build completado exitosamente."
-
-      - run:
-          name: Fetch All Branches
-          command: |
-            git fetch --all
-
       - store_artifacts:
           path: reports
           destination: test-results
 
+  # 3️⃣ Build
+  build:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Build App
+          command: |
+            echo "Build completado exitosamente."
+
+  # 4️⃣ Notificación a Discord
+  notify-discord:
+    docker:
+      - image: cimg/base:stable
+    steps:
       - run:
           name: Send Discord Notification
           when: always
           command: |
-            echo "Determinando estado del build..."
-            # CircleCI expone el estado del job como exit code. Si no hay error, es 0.
-            if [ "$CIRCLE_JOB" = "build-and-test" ]; then
-              if [ "$CIRCLECI_EXIT_CODE" = "0" ] || [ -z "$CIRCLECI_EXIT_CODE" ]; then
-                STATUS="SUCCESSFUL"
-                COLOR=65280   # Verde
-              else
-                STATUS="ABORTED"
-                COLOR=16711680  # Rojo
-              fi
+            echo "Determinando estado del workflow..."
+            if [ "$CIRCLE_WORKFLOW_STATUS" = "success" ]; then
+              STATUS="SUCCESSFUL"
+              COLOR=65280  # Verde
             else
-              STATUS="UNKNOWN"
-              COLOR=16776960  # Amarillo
+              STATUS="ABORTED"
+              COLOR=16711680  # Rojo
             fi
 
-            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Build:** #${CIRCLE_BUILD_NUM}\n**Estado:** ${STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
+            MESSAGE="**Proyecto:** ${CIRCLE_PROJECT_REPONAME}\n**Workflow:** ${CIRCLE_WORKFLOW_ID}\n**Estado:** ${STATUS}\n**Repositorio:** ${CIRCLE_REPOSITORY_URL}\n**Rama:** ${CIRCLE_BRANCH}\n**Build URL:** ${CIRCLE_BUILD_URL}"
 
             echo "Enviando notificación a Discord..."
             curl -H "Content-Type: application/json" \
@@ -81,9 +85,23 @@ jobs:
                  -d "{\"embeds\":[{\"title\":\"${CIRCLE_PROJECT_REPONAME}\",\"description\":\"${MESSAGE}\",\"color\":${COLOR}}]}" \
                  $DISCORD_WEBHOOK_URL
 
+# 🧩 Workflows: uno para la ejecución principal, otro para la notificación
 workflows:
   version: 2
+
+  # Primer workflow → Build principal
   build_and_test:
     jobs:
-      - build-and-test:
+      - lint
+      - unit-tests:
+          requires:
+            - lint
+      - build:
+          requires:
+            - unit-tests
+
+  # Segundo workflow → Notificación (se ejecuta siempre, independiente)
+  notify:
+    jobs:
+      - notify-discord:
           context: discord-webhook
