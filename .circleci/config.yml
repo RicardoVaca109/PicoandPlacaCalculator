@@ -81,6 +81,8 @@ jobs:
           name: Simular despliegue local
           command: |
             echo "Desplegando aplicación local..."
+            sudo apt-get update -y
+            sudo apt-get install -y rsync
             DEPLOY_PATH="./deploy_output"
             mkdir -p "$DEPLOY_PATH"
             rsync -av --exclude='.git' --exclude='.venv' --exclude='exclude.txt' ./ "$DEPLOY_PATH/"
