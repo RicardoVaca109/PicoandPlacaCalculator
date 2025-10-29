@@ -70,6 +70,27 @@ jobs:
           paths:
             - result.txt
 
+  deploy:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Simular despliegue local
+          command: |
+            echo "Desplegando aplicación local..."
+            DEPLOY_PATH="./deploy_output"
+            mkdir -p "$DEPLOY_PATH"
+            rsync -av --exclude='.git' --exclude='.venv' --exclude='exclude.txt' ./ "$DEPLOY_PATH/"
+            echo "Archivos copiados a $DEPLOY_PATH"
+            echo "SUCCESSFUL" > result.txt
+      - persist_to_workspace:
+          root: .
+          paths:
+            - result.txt
+
   notify-discord:
     docker:
       - image: cimg/python:3.12
@@ -116,6 +137,9 @@ workflows:
       - build:
           requires:
             - unit-tests
-      - notify-discord:
+      - deploy:
           requires:
             - build
+      - notify-discord:
+          requires:
+            - deploy
