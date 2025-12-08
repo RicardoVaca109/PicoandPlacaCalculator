@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pico-placa-app
+  labels:
+    app: pico-placa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pico-placa
+  template:
+    metadata:
+      labels:
+        app: pico-placa
+    spec:
+      containers:
+      - name: pico-placa
+        image: ghcr.io/ricardovaca109/picoandplacacalculator:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: LD_SDK_KEY
+          valueFrom:
+            secretKeyRef:
+              name: launchdarkly-secret
+              key: LD_SDK_KEY
