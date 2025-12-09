@@ -10,6 +10,8 @@ pipeline {
         REMOTE_PATH = "C:\\Users\\ricardo_vaca\\app"
         GIT_CREDENTIALS_ID = "github_token"
         DISCORD_CREDENTIALS_ID = "discord_webhook_url"
+        DOCKER_IMAGE = "ricardovaca109/pico-placa"
+        DOCKER_CREDENTIALS_ID = "docker_hub_credentials"
     }
 
     stages {
@@ -62,6 +64,39 @@ pipeline {
             steps {
                 echo "Compilando / preparando la app..."
                 bat 'echo Build completado exitosamente.'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Construyendo imagen Docker..."
+                script {
+                    def imageTag = "${env.BUILD_NUMBER}"
+                    bat """
+                        docker build -t ${DOCKER_IMAGE}:${imageTag} .
+                        docker tag ${DOCKER_IMAGE}:${imageTag} ${DOCKER_IMAGE}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo "Subiendo imagen a Docker Hub..."
+                script {
+                    def imageTag = "${env.BUILD_NUMBER}"
+                    withCredentials([usernamePassword(
+                        credentialsId: "${DOCKER_CREDENTIALS_ID}",
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        bat """
+                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                            docker push ${DOCKER_IMAGE}:${imageTag}
+                            docker push ${DOCKER_IMAGE}:latest
+                        """
+                    }
+                }
             }
         }
 
