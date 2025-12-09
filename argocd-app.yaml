@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: "https://github.com/RicardoVaca109/PicoandPlacaCalculator.git"
-    targetRevision: main
+    targetRevision: dev
     path: k8s
   destination:
     server: https://kubernetes.default.svc
