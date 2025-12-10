@@ -1,6 +1,5 @@
 FROM python:3.11-slim
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
 # Copiar requirements
@@ -16,8 +15,13 @@ COPY . .
 EXPOSE 5000
 
 # Variables de entorno
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1 \
+    FLASK_APP=app.py \
+    FLASK_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/').read()" || exit 1
 
 # Comando para ejecutar la aplicación
 CMD ["python", "app.py"]

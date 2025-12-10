@@ -16,16 +16,8 @@ spec:
     spec:
       containers:
         - name: pico-placa
-          image: python:3.11-slim
-          command: ["/bin/sh"]
-          args:
-            - -c
-            - |
-              apt-get update && apt-get install -y git
-              git clone https://github.com/RicardoVaca109/PicoandPlacaCalculator.git /app
-              cd /app
-              pip install --no-cache-dir -r requirements.txt
-              python app.py
+          image: ricardo109/pico-placa-app:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 5000
           env:
@@ -36,16 +28,16 @@ spec:
                   key: sdk-key
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
-            limits:
               memory: "256Mi"
               cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           livenessProbe:
             httpGet:
               path: /
               port: 5000
-            initialDelaySeconds: 120
+            initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
@@ -53,7 +45,7 @@ spec:
             httpGet:
               path: /
               port: 5000
-            initialDelaySeconds: 100
+            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
